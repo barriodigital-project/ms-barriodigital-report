@@ -133,11 +133,9 @@ MySQL
 
 ## Seguridad
 
-Rol principal:
-
-```text
-ADMIN
-```
+La autenticación y autorización del rol `ADMIN` quedan a cargo del BFF/gateway.
+Report no valida tokens y debe aceptar únicamente tráfico interno; no se debe
+exponer directamente el puerto `8087`.
 
 ## Observabilidad
 
@@ -172,10 +170,6 @@ La API de lectura y su modelo local quedan implementados, pero la carga de
 `RequestReport` está pendiente hasta integrar Kafka u otra fuente de escritura.
 Mientras la tabla esté vacía, los KPIs serán cero y las listas estarán vacías.
 Kafka no forma parte de esta etapa.
-
-El contrato declara Bearer JWT y permisos `ADMIN`; la validación de tokens y
-roles queda pendiente de acordar con la configuración de identidad compartida
-del proyecto. Esta etapa no configura autenticación propia.
 
 ## Configuración local
 
