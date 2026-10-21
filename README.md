@@ -4,12 +4,13 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 
 ## Responsabilidades
 
-- Consumir eventos desde Kafka.
+- Consultar indicadores y reportes de trámites.
 - Mantener información de reportería.
 - Generar KPIs.
 - Consultar trámites agrupados por estado.
 - Consultar tipos de trámite más solicitados.
 - Evitar consultas analíticas sobre la base de Requests.
+- La ingesta de datos desde Kafka se incorporará en una etapa posterior.
 
 ## Stack tecnológico
 
@@ -20,7 +21,6 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 - Hibernate
 - Maven
 - MySQL
-- Kafka
 - Spring Security
 - Eureka Client
 - Spring Boot Actuator
@@ -38,7 +38,7 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 barriodigital_report_db
 ```
 
-## Kafka
+## Integración futura con Kafka
 
 Tópico:
 
@@ -71,7 +71,7 @@ GET /api/v1/reports/requests-by-status
 GET /api/v1/reports/top-procedure-types
 ```
 
-## Flujo
+## Flujo futuro
 
 ```text
 Requests
@@ -104,20 +104,26 @@ ADMIN
 src/
 ├── main/
 │   ├── java/
-│   │   └── cl/duoc/barriodigital/report/
-│   │       ├── config/
-│   │       ├── consumer/
+│   │   └── cl/brarriodigital/report/
 │   │       ├── controller/
 │   │       ├── dto/
-│   │       ├── entity/
+│   │       │   ├── request/
+│   │       │   └── response/
+│   │       ├── exception/
+│   │       ├── model/
 │   │       ├── repository/
 │   │       ├── service/
-│   │       ├── security/
-│   │       └── exception/
+│   │       └── ReportMsApplication.java
 │   └── resources/
-│       └── application.yml
+│       └── application.properties
 └── test/
 ```
+
+## Alcance de la primera etapa
+
+Este primer incremento establece la estructura por capas para preparar la API
+de reportes. No incorpora Kafka ni una fuente de escritura de datos; por lo
+tanto, la ingesta necesaria para generar reportes queda pendiente.
 
 ## Contratos
 
