@@ -71,6 +71,11 @@ GET /api/v1/reports/requests-by-status
 GET /api/v1/reports/top-procedure-types
 ```
 
+La versión mayor de la API se expresa en la ruta (`/api/v1`). Los reportes
+usan el estado actual de cada trámite: incluyen todos los estados con su total
+(incluido cero), y el ranking completo de tipos se ordena por total descendente.
+Los empates se ordenan por UUID ascendente.
+
 ## Flujo futuro
 
 ```text
@@ -121,9 +126,18 @@ src/
 
 ## Alcance de la primera etapa
 
-Este primer incremento establece la estructura por capas para preparar la API
-de reportes. No incorpora Kafka ni una fuente de escritura de datos; por lo
-tanto, la ingesta necesaria para generar reportes queda pendiente.
+La API de lectura y su modelo local quedan implementados, pero la carga de
+`RequestReport` está pendiente hasta integrar Kafka u otra fuente de escritura.
+Mientras la tabla esté vacía, los KPIs serán cero y las listas estarán vacías.
+Kafka no forma parte de esta etapa.
+
+## Configuración local
+
+El servicio escucha en `localhost:8087` y usa MySQL en `localhost:3306` por
+defecto. Se pueden sobrescribir `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`
+y `DB_PASSWORD`. `JPA_DDL_AUTO` controla el DDL de Hibernate (por defecto
+`update`; usar una estrategia controlada por migraciones en producción).
+Actuator expone `health`, `info` y `metrics` bajo `/actuator`.
 
 ## Contratos
 
