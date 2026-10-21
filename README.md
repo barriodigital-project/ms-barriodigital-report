@@ -21,8 +21,7 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 - Hibernate
 - Maven
 - MySQL
-- Spring Security
-- Eureka Client
+- Lombok
 - Spring Boot Actuator
 - Docker
 
@@ -76,6 +75,50 @@ usan el estado actual de cada trámite: incluyen todos los estados con su total
 (incluido cero), y el ranking completo de tipos se ordena por total descendente.
 Los empates se ordenan por UUID ascendente.
 
+### Ejemplos HTTP
+
+```bash
+curl http://localhost:8087/api/v1/reports/kpis
+```
+
+```json
+{
+  "totalRequests": 3,
+  "ingresados": 1,
+  "admitidos": 1,
+  "enGestion": 0,
+  "enTerreno": 0,
+  "resueltos": 1,
+  "rechazados": 0
+}
+```
+
+```bash
+curl http://localhost:8087/api/v1/reports/requests-by-status
+```
+
+```json
+[
+  { "status": "INGRESADO", "total": 1 },
+  { "status": "ADMITIDO", "total": 1 },
+  { "status": "EN_GESTION", "total": 0 },
+  { "status": "EN_TERRENO", "total": 0 },
+  { "status": "RESUELTO", "total": 1 },
+  { "status": "RECHAZADO", "total": 0 }
+]
+```
+
+```bash
+curl http://localhost:8087/api/v1/reports/top-procedure-types
+```
+
+```json
+[
+  { "procedureTypeId": "00000000-0000-0000-0000-000000000001", "total": 2 },
+  { "procedureTypeId": "00000000-0000-0000-0000-000000000002", "total": 1 }
+]
+```
+
 ## Flujo futuro
 
 ```text
@@ -112,7 +155,6 @@ src/
 │   │   └── cl/brarriodigital/report/
 │   │       ├── controller/
 │   │       ├── dto/
-│   │       │   ├── request/
 │   │       │   └── response/
 │   │       ├── exception/
 │   │       ├── model/
@@ -130,6 +172,10 @@ La API de lectura y su modelo local quedan implementados, pero la carga de
 `RequestReport` está pendiente hasta integrar Kafka u otra fuente de escritura.
 Mientras la tabla esté vacía, los KPIs serán cero y las listas estarán vacías.
 Kafka no forma parte de esta etapa.
+
+El contrato declara Bearer JWT y permisos `ADMIN`; la validación de tokens y
+roles queda pendiente de acordar con la configuración de identidad compartida
+del proyecto. Esta etapa no configura autenticación propia.
 
 ## Configuración local
 
