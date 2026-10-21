@@ -37,6 +37,9 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 barriodigital_report_db
 ```
 
+Al ejecutar desde esta carpeta, Spring carga `DB_PASSWORD` desde el archivo
+compartido `../.env` del workspace. Ese archivo local no se versiona.
+
 ## Integración futura con Kafka
 
 Tópico:
