@@ -10,7 +10,7 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 - Consultar trámites agrupados por estado.
 - Consultar tipos de trámite más solicitados.
 - Evitar consultas analíticas sobre la base de Requests.
-- La ingesta de datos desde Kafka se incorporará en una etapa posterior.
+- La carga de datos de reportería está pendiente.
 
 ## Stack tecnológico
 
@@ -39,20 +39,7 @@ report_db
 
 Al ejecutar desde esta carpeta, Spring carga `DB_PASSWORD` desde el archivo
 compartido `../.env` del workspace. Ese archivo local no se versiona.
-
-## Integración futura con Kafka
-
-Tópico:
-
-```text
-requests.events
-```
-
-Consumer Group:
-
-```text
-barriodigital-report-group
-```
+`DB_PASSWORD` es obligatoria; no existe una contraseña fallback.
 
 ## Modelo
 
@@ -78,60 +65,14 @@ usan el estado actual de cada trámite: incluyen todos los estados con su total
 (incluido cero), y el ranking completo de tipos se ordena por total descendente.
 Los empates se ordenan por UUID ascendente.
 
-### Ejemplos HTTP
-
-```bash
-curl http://localhost:8087/api/v1/reports/kpis
-```
-
-```json
-{
-  "totalRequests": 3,
-  "ingresados": 1,
-  "admitidos": 1,
-  "enGestion": 0,
-  "enTerreno": 0,
-  "resueltos": 1,
-  "rechazados": 0
-}
-```
-
-```bash
-curl http://localhost:8087/api/v1/reports/requests-by-status
-```
-
-```json
-[
-  { "status": "INGRESADO", "total": 1 },
-  { "status": "ADMITIDO", "total": 1 },
-  { "status": "EN_GESTION", "total": 0 },
-  { "status": "EN_TERRENO", "total": 0 },
-  { "status": "RESUELTO", "total": 1 },
-  { "status": "RECHAZADO", "total": 0 }
-]
-```
-
-```bash
-curl http://localhost:8087/api/v1/reports/top-procedure-types
-```
-
-```json
-[
-  { "procedureTypeId": "00000000-0000-0000-0000-000000000001", "total": 2 },
-  { "procedureTypeId": "00000000-0000-0000-0000-000000000002", "total": 1 }
-]
-```
-
-## Flujo futuro
+## Fuente de datos pendiente
 
 ```text
-Requests
+Fuente de solicitudes/eventos (por definir)
    ↓
-Kafka
+RequestReport
    ↓
-Report
-   ↓
-MySQL
+MySQL local de Report
 ```
 
 ## Seguridad
@@ -170,9 +111,13 @@ src/
 ## Alcance de la primera etapa
 
 La API de lectura y su modelo local quedan implementados, pero la carga de
-`RequestReport` está pendiente hasta integrar Kafka u otra fuente de escritura.
+`RequestReport` está pendiente: no existe productor/consumidor ni otra fuente
+de escritura implementada.
 Mientras la tabla esté vacía, los KPIs serán cero y las listas estarán vacías.
-Kafka no forma parte de esta etapa.
+No se introduce un broker local solo para alimentar Report. La futura fuente y
+su integración deben definirse antes de presentar datos como operativos.
+Las respuestas se calculan exclusivamente desde las filas reales de `report_db`;
+no se generan métricas de muestra ni se presenta información simulada.
 
 ## Configuración local
 
@@ -191,7 +136,6 @@ El servicio se registra en Eureka. Por defecto usa
 
 ```text
 barriodigital-contracts/openapi/report.openapi.yaml
-barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ```
 
 ## Ejecución
@@ -199,6 +143,10 @@ barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ```bash
 ./mvnw spring-boot:run
 ```
+
+Para iniciar la base local junto con los demás servicios, usar
+[`compose-up.ps1`](../barriodigital-infra/scripts/compose-up.ps1) desde la raíz
+del workspace.
 
 ## Docker
 
