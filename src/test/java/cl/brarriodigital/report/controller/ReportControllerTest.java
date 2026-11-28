@@ -1,6 +1,8 @@
 package cl.brarriodigital.report.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import cl.brarriodigital.report.model.RequestReport;
 import cl.brarriodigital.report.model.RequestStatus;
+import cl.brarriodigital.report.repository.ProcessedRequestEventRepository;
 import cl.brarriodigital.report.repository.RequestReportRepository;
 
 @SpringBootTest
@@ -33,9 +36,13 @@ class ReportControllerTest {
     @Autowired
     private RequestReportRepository repository;
 
+    @Autowired
+    private ProcessedRequestEventRepository processedEventRepository;
+
     @BeforeEach
     void setUp() {
         repository.deleteAll();
+        processedEventRepository.deleteAll();
         saveRequest(FIRST_PROCEDURE_TYPE_ID, RequestStatus.INGRESADO);
         saveRequest(FIRST_PROCEDURE_TYPE_ID, RequestStatus.RESUELTO);
         saveRequest(SECOND_PROCEDURE_TYPE_ID, RequestStatus.RECHAZADO);
@@ -90,6 +97,55 @@ class ReportControllerTest {
         mockMvc.perform(get("/api/v1/reports/top-procedure-types"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void processesRequestEventsIdempotentlyAndIgnoresOlderEvents() throws Exception {
+        repository.deleteAll();
+        processedEventRepository.deleteAll();
+        UUID requestId = UUID.fromString("00000000-0000-0000-0000-000000000010");
+        UUID procedureTypeId = UUID.fromString("00000000-0000-0000-0000-000000000011");
+        String createdEvent = """
+            {
+              "schemaVersion": 1,
+              "eventId": "00000000-0000-0000-0000-000000000012",
+              "eventType": "REQUEST_CREATED",
+              "occurredAt": "2026-03-01T10:00:00Z",
+              "requestId": "00000000-0000-0000-0000-000000000010",
+              "procedureTypeId": "00000000-0000-0000-0000-000000000011",
+              "status": "INGRESADO"
+            }
+            """;
+        String statusChangedEvent = """
+            {
+              "schemaVersion": 1,
+              "eventId": "00000000-0000-0000-0000-000000000013",
+              "eventType": "REQUEST_STATUS_CHANGED",
+              "occurredAt": "2026-03-01T10:01:00Z",
+              "requestId": "00000000-0000-0000-0000-000000000010",
+              "procedureTypeId": "00000000-0000-0000-0000-000000000011",
+              "status": "ADMITIDO"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/internal/request-events")
+                .contentType("application/json")
+                .content(statusChangedEvent))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/internal/request-events")
+                .contentType("application/json")
+                .content(createdEvent))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/internal/request-events")
+                .contentType("application/json")
+                .content(statusChangedEvent))
+            .andExpect(status().isNoContent());
+
+        var report = repository.findByRequestId(requestId).orElseThrow();
+        assertThat(report.getProcedureTypeId()).isEqualTo(procedureTypeId);
+        assertThat(report.getStatus()).isEqualTo(RequestStatus.ADMITIDO);
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(processedEventRepository.count()).isEqualTo(2);
     }
 
     private void saveRequest(UUID procedureTypeId, RequestStatus status) {

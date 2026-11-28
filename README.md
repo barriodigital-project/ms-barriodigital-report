@@ -10,7 +10,7 @@ Microservicio encargado de indicadores y reportería de **BarrioDigital**.
 - Consultar trámites agrupados por estado.
 - Consultar tipos de trámite más solicitados.
 - Evitar consultas analíticas sobre la base de Requests.
-- La carga de datos de reportería está pendiente.
+- Consumir eventos de solicitudes para mantener el modelo de lectura.
 
 ## Stack tecnológico
 
@@ -58,7 +58,11 @@ RequestReport
 GET /api/v1/reports/kpis
 GET /api/v1/reports/requests-by-status
 GET /api/v1/reports/top-procedure-types
+POST /api/v1/internal/request-events
 ```
+
+El endpoint de ingesta es interno y solo debe aceptar tráfico desde Lambda;
+no se expone por BFF ni por API Gateway.
 
 La versión mayor de la API se expresa en la ruta (`/api/v1`). Los reportes
 usan el estado actual de cada trámite: incluyen todos los estados con su total
@@ -68,11 +72,9 @@ Los empates se ordenan por UUID ascendente.
 ## Fuente de datos pendiente
 
 ```text
-Fuente de solicitudes/eventos (por definir)
-   ↓
-RequestReport
-   ↓
-MySQL local de Report
+Requests → Outbox → SQS → Lambda → Report
+                               ↓
+                     RequestReport + eventId
 ```
 
 ## Seguridad
@@ -110,14 +112,10 @@ src/
 
 ## Alcance de la primera etapa
 
-La API de lectura y su modelo local quedan implementados, pero la carga de
-`RequestReport` está pendiente: no existe productor/consumidor ni otra fuente
-de escritura implementada.
-Mientras la tabla esté vacía, los KPIs serán cero y las listas estarán vacías.
-No se introduce un broker local solo para alimentar Report. La futura fuente y
-su integración deben definirse antes de presentar datos como operativos.
-Las respuestas se calculan exclusivamente desde las filas reales de `report_db`;
-no se generan métricas de muestra ni se presenta información simulada.
+La carga de `RequestReport` se realiza mediante los eventos de Requests
+consumidos por Lambda. `eventId` se registra transaccionalmente junto al cambio
+de reportería para que las entregas repetidas no dupliquen ni reviertan el
+estado. Eventos antiguos no sobrescriben estados más recientes.
 
 ## Configuración local
 
@@ -131,6 +129,10 @@ Actuator expone `health`, `info` y `metrics` bajo `/actuator`.
 
 El servicio se registra en Eureka. Por defecto usa
 `http://localhost:8761/eureka/`; se puede cambiar mediante `EUREKA_SERVER_URL`.
+
+El endpoint `POST /api/v1/internal/request-events` responde 204 al procesar un
+evento nuevo o repetido, y 400 si el contrato no es válido. Los errores de
+persistencia responden con error para que Lambda solicite el reintento de SQS.
 
 ## Contratos
 
